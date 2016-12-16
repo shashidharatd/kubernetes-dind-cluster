@@ -24,7 +24,7 @@ node:
     exec wrapdocker bash -c "
     hyperkube kubelet
     --hostname-override=$${HOSTNAME_OVERRIDE}
-    --node-labels="rack=$${N},gen=201$${N}"
+    --node-labels="rack=$${N},gen=201$${N},failure-domain.beta.kubernetes.io/region=${CLUSTER_REGION},failure-domain.beta.kubernetes.io/zone=${CLUSTER_ZONE}"
     --api-servers=http://apiserver:8888
     --allow-privileged
     --cluster-dns=${DNS_SERVER_IP}

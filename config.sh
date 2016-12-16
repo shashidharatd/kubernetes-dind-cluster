@@ -40,3 +40,7 @@ PRIVATE_REGISTRY=${PRIVATE_REGISTRY:-172.17.0.1:5000}
 if [[ "${USE_PRIVATE_REGISTRY}" == "true" ]]; then
   DOCKER_DAEMON_ARGS="${DOCKER_DAEMON_ARGS} --insecure-registry ${PRIVATE_REGISTRY}"
 fi
+
+# Node labels indicating cluster Region & Zones
+CLUSTER_REGION=${CLUSTER_REGION:-asia-east1}
+CLUSTER_ZONE=${CLUSTER_ZONE:-asia-east1-a}

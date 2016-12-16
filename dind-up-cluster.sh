@@ -43,6 +43,8 @@ function dind::docker_compose {
     "DNS_SERVER_IP"
     "DNS_DOMAIN"
     "DOCKER_DAEMON_ARGS"
+    "CLUSTER_REGION"
+    "CLUSTER_ZONE"
   )
 
   (
