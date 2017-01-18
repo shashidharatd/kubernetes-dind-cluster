@@ -82,13 +82,15 @@ function dind::create-kubeconfig {
   local -r auth_dir="${DOCKER_IN_DOCKER_WORK_DIR}/auth"
   local kubectl="cluster/kubectl.sh"
 
-  local token="$(cut -d, -f1 ${auth_dir}/token-users)"
-  "${kubectl}" config set-cluster "dind" --server="${KUBE_SERVER}" --certificate-authority="${auth_dir}/ca.pem"
-  "${kubectl}" config set-context "dind" --cluster="dind" --user="cluster-admin"
-  "${kubectl}" config set-credentials cluster-admin --token="${token}"
-  "${kubectl}" config use-context "dind" --cluster="dind"
+  local name="federation-dind"
 
-   echo "Wrote config for dind context" 1>&2
+  local token="$(cut -d, -f1 ${auth_dir}/token-users)"
+  "${kubectl}" config set-cluster ${name} --server="${KUBE_SERVER}" --certificate-authority="${auth_dir}/ca.pem" --embed-certs=true
+  "${kubectl}" config set-context ${name} --cluster=${name} --user="cluster-admin"
+  "${kubectl}" config set-credentials cluster-admin --token="${token}"
+  "${kubectl}" config use-context ${name} --cluster=${name}
+
+   echo "Wrote config for ${name} context" 1>&2
 }
 
 # Must ensure that the following ENV vars are set
