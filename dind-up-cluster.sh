@@ -140,9 +140,9 @@ function dind::init_auth {
   openssl genrsa -out "${auth_dir}/service-accounts-key.pem" 2048 &>/dev/null
 
   local -r BASIC_PASSWORD="$(openssl rand -hex 16)"
-  local -r KUBELET_TOKEN="$(openssl rand -hex 32)"
+  local -r MASTER_TOKEN="$(openssl rand -hex 32)"
   echo "${BASIC_PASSWORD},admin,admin" > ${auth_dir}/basic-users
-  echo "${KUBELET_TOKEN},kubelet,kubelet" > ${auth_dir}/token-users
+  echo "${MASTER_TOKEN},cluster-admin,cluster-admin,system:masters" > ${auth_dir}/token-users
   dind::step "Creating credentials:" "admin:${BASIC_PASSWORD}, kubelet token"
 
   dind::step "Create TLS certs & keys:"
