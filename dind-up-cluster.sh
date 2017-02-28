@@ -201,6 +201,7 @@ function dind::kube-up {
 
 function dind::deploy-dns {
   dind::step "Deploying kube-dns"
+  "cluster/kubectl.sh" --namespace=kube-system create -f cluster/addons/dns/kubedns-sa.yaml
   "cluster/kubectl.sh" create -f <(
     for f in kubedns-controller.yaml kubedns-svc.yaml; do
       echo "---"
