@@ -45,6 +45,9 @@ function dind::docker_compose {
     "DOCKER_DAEMON_ARGS"
     "CLUSTER_REGION"
     "CLUSTER_ZONE"
+    "ETCD_PORT"
+    "APISERVER_PORT"
+    "APISERVER_INSECURE_PORT"
   )
 
   (
@@ -54,7 +57,7 @@ function dind::docker_compose {
 
     export DOCKER_IN_DOCKER_STORAGE_DIR=${DOCKER_IN_DOCKER_STORAGE_DIR:-${DOCKER_IN_DOCKER_WORK_DIR}/storage}
 
-    docker-compose -p dind -f "${DIND_ROOT}/docker-compose.yml" ${params}
+    docker-compose -p ${CLUSTER_NAME} -f "${DIND_ROOT}/docker-compose.yml" ${params}
   )
 }
 
@@ -82,12 +85,12 @@ function dind::create-kubeconfig {
   local -r auth_dir="${DOCKER_IN_DOCKER_WORK_DIR}/auth"
   local kubectl="cluster/kubectl.sh"
 
-  local name="federation-dind"
+  local name="federation-${CLUSTER_NAME}"
 
   local token="$(cut -d, -f1 ${auth_dir}/token-users)"
   "${kubectl}" config set-cluster ${name} --server="${KUBE_SERVER}" --certificate-authority="${auth_dir}/ca.pem" --embed-certs=true
-  "${kubectl}" config set-context ${name} --cluster=${name} --user="cluster-admin"
-  "${kubectl}" config set-credentials cluster-admin --token="${token}"
+  "${kubectl}" config set-context ${name} --cluster=${name} --user="${CLUSTER_NAME}-admin"
+  "${kubectl}" config set-credentials ${CLUSTER_NAME}-admin --token="${token}"
   "${kubectl}" config use-context ${name} --cluster=${name}
 
    echo "Wrote config for ${name} context" 1>&2
@@ -95,7 +98,7 @@ function dind::create-kubeconfig {
 
 # Must ensure that the following ENV vars are set
 function dind::detect-master {
-  KUBE_MASTER_IP="${APISERVER_ADDRESS}:6443"
+  KUBE_MASTER_IP="${APISERVER_ADDRESS}:${APISERVER_PORT}"
   KUBE_SERVER="https://${KUBE_MASTER_IP}"
 
   echo "KUBE_MASTER_IP: $KUBE_MASTER_IP" 1>&2
@@ -103,7 +106,7 @@ function dind::detect-master {
 
 # Get minion IP addresses and store in KUBE_NODE_IP_ADDRESSES[]
 function dind::detect-nodes {
-  local docker_ids=$(docker ps --filter="name=dind_node" --quiet)
+  local docker_ids=$(docker ps --filter="name=${CLUSTER_NAME}_node" --quiet)
   if [ -z "${docker_ids}" ]; then
     echo "ERROR: node(s) not running" 1>&2
     return 1
@@ -142,7 +145,7 @@ function dind::init_auth {
   local -r BASIC_PASSWORD="$(openssl rand -hex 16)"
   local -r MASTER_TOKEN="$(openssl rand -hex 32)"
   echo "${BASIC_PASSWORD},admin,admin" > ${auth_dir}/basic-users
-  echo "${MASTER_TOKEN},cluster-admin,cluster-admin,system:masters" > ${auth_dir}/token-users
+  echo "${MASTER_TOKEN},${CLUSTER_NAME}-admin,${CLUSTER_NAME}-admin,system:masters" > ${auth_dir}/token-users
   dind::step "Creating credentials:" "admin:${BASIC_PASSWORD}, kubelet token"
 
   dind::step "Create TLS certs & keys:"
@@ -171,13 +174,13 @@ function dind::kube-up {
 
   dind::init_auth
 
-  dind::step "Starting dind cluster"
+  dind::step "Starting cluster ${CLUSTER_NAME}"
   dind::docker_compose up -d --force-recreate
-  dind::step "Scaling dind cluster to ${NUM_NODES} slaves"
+  dind::step "Scaling cluster ${CLUSTER_NAME} to ${NUM_NODES} slaves"
   dind::docker_compose scale node=${NUM_NODES}
 
-  dind::step -n "Waiting for https://${APISERVER_ADDRESS}:6443 to be healthy"
-  while ! curl -o /dev/null -s --cacert ${DOCKER_IN_DOCKER_WORK_DIR}/auth/ca.pem https://${APISERVER_ADDRESS}:6443; do
+  dind::step -n "Waiting for https://${APISERVER_ADDRESS}:${APISERVER_PORT} to be healthy"
+  while ! curl -o /dev/null -s --cacert ${DOCKER_IN_DOCKER_WORK_DIR}/auth/ca.pem https://${APISERVER_ADDRESS}:${APISERVER_PORT}; do
     sleep 1
     echo -n "."
   done
@@ -200,6 +203,8 @@ function dind::kube-up {
 }
 
 function dind::deploy-dns {
+  until $("cluster/kubectl.sh" get ns |grep "kube-system" >/dev/null 2>&1); do echo "waiting for 'kube-system' namespace to be ready"; sleep 2; done
+
   dind::step "Deploying kube-dns"
   "cluster/kubectl.sh" --namespace=kube-system create -f cluster/addons/dns/kubedns-sa.yaml
   "cluster/kubectl.sh" create -f <(
@@ -220,7 +225,7 @@ function dind::deploy-ui {
 }
 
 function dind::validate-cluster {
-  dind::step "Validating dind cluster"
+  dind::step "Validating cluster ${CLUSTER_NAME}"
 
   # Do not validate cluster size. There will be zero k8s minions until a pod is created.
   # TODO(karlkfi): use componentstatuses or equivalent when it supports non-localhost core components
@@ -232,10 +237,10 @@ function dind::validate-cluster {
 
 # Delete a kubernetes cluster
 function dind::kube-down {
-  dind::step "Stopping dind cluster"
+  dind::step "Stopping cluster ${CLUSTER_NAME}"
   # Since restoring a stopped cluster is not yet supported, use the nuclear option
   dind::docker_compose kill
-  dind::docker_compose rm -f --all
+  dind::docker_compose rm -f -v
 }
 
 # Waits for a kube-system pod (of the provided name) to have the phase/status "Running".
@@ -282,18 +287,23 @@ function dind::step {
   fi
 }
 
+source "${DIND_ROOT}/config.sh"
+
+CLUSTER_CONFIG="${DIND_ROOT}/${1:-}.sh"
+if [ -f "${CLUSTER_CONFIG}" ]; then
+  source "${CLUSTER_CONFIG}"
+fi
+
 if [ $(basename "$0") = dind-up-cluster.sh ]; then
-    source "${DIND_ROOT}/config.sh"
     dind::kube-up
     echo
     "cluster/kubectl.sh" cluster-info
-    if [ "${1:-}" = "-w" ]; then
+    if [ "${2:-}" = "-w" ]; then
       trap "echo; dind::kube-down" INT
       echo
       echo "Press Ctrl-C to shutdown cluster"
       while true; do sleep 1; done
     fi
 elif [ $(basename "$0") = dind-down-cluster.sh ]; then
-  source "${DIND_ROOT}/config.sh"
   dind::kube-down
 fi

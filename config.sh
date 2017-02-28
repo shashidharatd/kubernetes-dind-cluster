@@ -42,5 +42,10 @@ if [[ "${USE_PRIVATE_REGISTRY}" == "true" ]]; then
 fi
 
 # Node labels indicating cluster Region & Zones
-CLUSTER_REGION=${CLUSTER_REGION:-asia-east1}
-CLUSTER_ZONE=${CLUSTER_ZONE:-asia-east1-a}
+CLUSTER_REGION="asia-east1"
+CLUSTER_ZONE="asia-east1-a"
+
+CLUSTER_NAME="c1"
+ETCD_PORT=4001
+APISERVER_PORT=6443
+APISERVER_INSECURE_PORT=8888
