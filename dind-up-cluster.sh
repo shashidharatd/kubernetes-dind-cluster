@@ -304,4 +304,6 @@ if [ $(basename "$0") = dind-up-cluster.sh ]; then
     fi
 elif [ $(basename "$0") = dind-down-cluster.sh ]; then
   dind::kube-down
+elif [ $(basename "$0") = dind-logs.sh ]; then
+  dind::docker_compose logs -f $@
 fi
