@@ -50,6 +50,7 @@ node:
   - DOCKER_DAEMON_ARGS
   volumes:
   - ${DOCKER_IN_DOCKER_STORAGE_DIR}:/var/lib/docker
+  - /sys/fs/cgroup:/sys/fs/cgroup
   links:
   - apiserver
 apiserver:
