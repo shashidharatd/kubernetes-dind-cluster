@@ -42,6 +42,7 @@ function dind::docker_compose {
     "SERVICE_CIDR"
     "DNS_SERVER_IP"
     "DNS_DOMAIN"
+    "DOCKER_DAEMON_ARGS"
   )
 
   (
