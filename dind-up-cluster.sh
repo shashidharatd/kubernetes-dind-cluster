@@ -287,9 +287,9 @@ function dind::step {
 
 source "${DIND_ROOT}/config.sh"
 
-CLUSTER_CONFIG="${DIND_ROOT}/${1:-}.sh"
+CLUSTER_CONFIG="${DIND_ROOT}/cluster_vars.sh"
 if [ -f "${CLUSTER_CONFIG}" ]; then
-  source "${CLUSTER_CONFIG}"
+  source "${CLUSTER_CONFIG}" ${1:-0}
 fi
 
 if [ $(basename "$0") = dind-up-cluster.sh ]; then
