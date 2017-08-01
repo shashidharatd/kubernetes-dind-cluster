@@ -2,8 +2,10 @@ CNUM=${1:-0} #default is no increment for cluster 0
 if ! [[ "$CNUM" =~ ^[0-9]+$ ]] ; then
    echo "Error: Expected an integer for cluster number"; exit 1
 fi
-CLUSTER_REGION="asia-central$CNUM"
-CLUSTER_ZONE="asia-central$CNUM-a"
+CLUSTER_REGION="europe-west1"
+#CLUSTER_REGION="us-central1"
+CLUSTER_ZONE="europe-west1-b"
+#CLUSTER_ZONE="us-central1-b"
 
 CLUSTER_NAME="c$CNUM"
 echo "$CLUSTER_NAME"
