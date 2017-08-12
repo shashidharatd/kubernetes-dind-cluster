@@ -31,7 +31,7 @@ APISERVER_SERVICE_IP="${APISERVER_SERVICE_IP:-10.0.0.1}"
 SERVICE_CIDR="${SERVICE_CIDR:-${APISERVER_SERVICE_IP}/24}"
 
 # Number of nodes
-NUM_NODES=${NUM_NODES:-2}
+NUM_NODES=${NUM_NODES:-1}
 
 # Private registry to pull kubernetes images while not connected to internet
 USE_PRIVATE_REGISTRY="true"

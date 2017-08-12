@@ -56,6 +56,27 @@ function dind::docker_compose {
     done
 
     export DOCKER_IN_DOCKER_STORAGE_DIR=${DOCKER_IN_DOCKER_STORAGE_DIR:-${DOCKER_IN_DOCKER_WORK_DIR}/storage}
+    export DOCKER_IN_DOCKER_CONFIG_DIR=${DOCKER_IN_DOCKER_CONFIG_DIR:-${DOCKER_IN_DOCKER_WORK_DIR}/config}
+    if [ ! -d ${DOCKER_IN_DOCKER_CONFIG_DIR} ]; then
+        mkdir -p ${DOCKER_IN_DOCKER_CONFIG_DIR}
+    fi
+
+    cat <<EOF > ${DOCKER_IN_DOCKER_CONFIG_DIR}/master-kubeconfig.yaml
+apiVersion: v1
+kind: Config
+clusters:
+- name: local
+  cluster:
+    server: http://apiserver:${APISERVER_INSECURE_PORT}
+users:
+- name: kubelet
+contexts:
+- context:
+    cluster: local
+    user: kubelet
+  name: kubelet-context
+current-context: kubelet-context
+EOF
 
     docker-compose -p ${CLUSTER_NAME} -f "${DIND_ROOT}/docker-compose.yml" ${params}
   )
@@ -287,9 +308,9 @@ function dind::step {
 
 source "${DIND_ROOT}/config.sh"
 
-CLUSTER_CONFIG="${DIND_ROOT}/${1:-}.sh"
+CLUSTER_CONFIG="${DIND_ROOT}/cluster_vars.sh"
 if [ -f "${CLUSTER_CONFIG}" ]; then
-  source "${CLUSTER_CONFIG}"
+  source "${CLUSTER_CONFIG}" ${1:-0}
 fi
 
 if [ $(basename "$0") = dind-up-cluster.sh ]; then
@@ -305,5 +326,6 @@ if [ $(basename "$0") = dind-up-cluster.sh ]; then
 elif [ $(basename "$0") = dind-down-cluster.sh ]; then
   dind::kube-down
 elif [ $(basename "$0") = dind-logs.sh ]; then
+  shift
   dind::docker_compose logs -f $@
 fi
